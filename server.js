@@ -30,11 +30,25 @@ io.on('connection', (socket) => {
       rooms[roomId] = {
         users: [],
         code: '', 
-        language: 'javascript', 
+        language: 'c', 
         input: '', 
         output: '', 
       };
     }
+
+    rooms[roomId].users.push({ id: socket.id, username });
+
+  socket.to(roomId).emit('userJoined', { username, state: null });
+
+  socket.emit('syncState', {
+    code: rooms[roomId].code,
+    language: rooms[roomId].language,
+    input: rooms[roomId].input,
+    output: rooms[roomId].output,
+  });
+
+  socket.join(roomId);
+
 
     rooms[roomId].users.push({ id: socket.id, username });
     socket.join(roomId);
