@@ -38,10 +38,8 @@ io.on('connection', (socket) => {
   
     rooms[roomId].users.push({ id: socket.id, username });
   
-    // Join the room
     socket.join(roomId);
   
-    // Send the current state of the room to the new user
     socket.emit('syncState', {
       code: rooms[roomId].code,
       language: rooms[roomId].language,
@@ -49,10 +47,8 @@ io.on('connection', (socket) => {
       output: rooms[roomId].output,
     });
   
-    // Notify other users that a new user has joined
     socket.to(roomId).emit('userJoined', { username });
   
-    // Emit the updated list of users in the room
     io.to(roomId).emit('roomUsers', rooms[roomId].users);
   
     console.log(`${username} joined room ${roomId}`);
@@ -60,9 +56,16 @@ io.on('connection', (socket) => {
   
 
   socket.on('codeChange', ({ roomId, code }) => {
-    if (!rooms[roomId]) return;
-    rooms[roomId].code = code;
-    socket.to(roomId).emit('codeUpdate', code);
+    if (rooms[roomId]) {
+      rooms[roomId].code = code; 
+      socket.to(roomId).emit('codeUpdate', code); 
+      io.to(roomId).emit('syncState', { 
+        code: rooms[roomId].code,
+        language: rooms[roomId].language,
+        input: rooms[roomId].input,
+        output: rooms[roomId].output,
+      });
+    }
   });
 
   socket.on('languageChange', ({ roomId, language }) => {
@@ -71,16 +74,30 @@ io.on('connection', (socket) => {
     socket.to(roomId).emit('languageUpdate', language);
   });
 
-  socket.on('inputChange', ({ roomId, input }) => {
-    if (!rooms[roomId]) return;
-    rooms[roomId].input = input;
-    socket.to(roomId).emit('inputUpdate', input);
+  ssocket.on('inputChange', ({ roomId, input }) => {
+    if (rooms[roomId]) {
+      rooms[roomId].input = input; 
+      socket.to(roomId).emit('inputUpdate', input); 
+      io.to(roomId).emit('syncState', { 
+        code: rooms[roomId].code,
+        language: rooms[roomId].language,
+        input: rooms[roomId].input,
+        output: rooms[roomId].output,
+      });
+    }
   });
-
+  
   socket.on('outputChange', ({ roomId, output }) => {
-    if (!rooms[roomId]) return;
-    rooms[roomId].output = output;
-    socket.to(roomId).emit('outputUpdate', output);
+    if (rooms[roomId]) {
+      rooms[roomId].output = output; 
+      socket.to(roomId).emit('outputUpdate', output); 
+      io.to(roomId).emit('syncState', { 
+        code: rooms[roomId].code,
+        language: rooms[roomId].language,
+        input: rooms[roomId].input,
+        output: rooms[roomId].output,
+      });
+    }
   });
 
   socket.on('leaveRoom', ({ roomId }) => {
