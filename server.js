@@ -74,7 +74,7 @@ io.on('connection', (socket) => {
     socket.to(roomId).emit('languageUpdate', language);
   });
 
-  ssocket.on('inputChange', ({ roomId, input }) => {
+  socket.on('inputChange', ({ roomId, input }) => {
     if (rooms[roomId]) {
       rooms[roomId].input = input; 
       socket.to(roomId).emit('inputUpdate', input); 
