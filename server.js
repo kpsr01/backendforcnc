@@ -26,40 +26,16 @@ io.on('connection', (socket) => {
   console.log('New client connected:', socket.id);
 
   socket.on('joinRoom', ({ roomId, username }) => {
+    if (!roomId || !username) return;
+
     if (!rooms[roomId]) {
-      rooms[roomId] = {
-        users: [],
-        code: '', 
-        language: 'c', 
-        input: '', 
-        output: '', 
-      };
+      rooms[roomId] = { users: [], code: '', language: 'c', input: '', output: '' };
     }
-
-    rooms[roomId].users.push({ id: socket.id, username });
-
-  socket.to(roomId).emit('userJoined', { username, state: null });
-
-  socket.emit('syncState', {
-    code: rooms[roomId].code,
-    language: rooms[roomId].language,
-    input: rooms[roomId].input,
-    output: rooms[roomId].output,
-  });
-
-  socket.join(roomId);
-
 
     rooms[roomId].users.push({ id: socket.id, username });
     socket.join(roomId);
 
-    socket.emit('roomState', {
-      code: rooms[roomId].code,
-      language: rooms[roomId].language,
-      input: rooms[roomId].input,
-      output: rooms[roomId].output,
-    });
-
+    socket.emit('roomState', rooms[roomId]);
     socket.to(roomId).emit('userJoined', { username });
     io.to(roomId).emit('roomUsers', rooms[roomId].users);
 
@@ -67,23 +43,41 @@ io.on('connection', (socket) => {
   });
 
   socket.on('codeChange', ({ roomId, code }) => {
-    if (rooms[roomId]) rooms[roomId].code = code; 
+    if (!rooms[roomId]) return;
+    rooms[roomId].code = code;
     socket.to(roomId).emit('codeUpdate', code);
   });
 
   socket.on('languageChange', ({ roomId, language }) => {
-    if (rooms[roomId]) rooms[roomId].language = language; 
+    if (!rooms[roomId]) return;
+    rooms[roomId].language = language;
     socket.to(roomId).emit('languageUpdate', language);
   });
 
   socket.on('inputChange', ({ roomId, input }) => {
-    if (rooms[roomId]) rooms[roomId].input = input; 
+    if (!rooms[roomId]) return;
+    rooms[roomId].input = input;
     socket.to(roomId).emit('inputUpdate', input);
   });
 
   socket.on('outputChange', ({ roomId, output }) => {
-    if (rooms[roomId]) rooms[roomId].output = output; 
+    if (!rooms[roomId]) return;
+    rooms[roomId].output = output;
     socket.to(roomId).emit('outputUpdate', output);
+  });
+
+  socket.on('leaveRoom', ({ roomId }) => {
+    if (!rooms[roomId]) return;
+    const userIndex = rooms[roomId].users.findIndex((user) => user.id === socket.id);
+    if (userIndex !== -1) {
+      rooms[roomId].users.splice(userIndex, 1);
+      io.to(roomId).emit('roomUsers', rooms[roomId].users);
+    }
+
+    if (rooms[roomId].users.length === 0) delete rooms[roomId];
+
+    socket.leave(roomId);
+    console.log(`Socket ${socket.id} left room ${roomId}`);
   });
 
   socket.on('disconnect', () => {
@@ -91,7 +85,7 @@ io.on('connection', (socket) => {
     let username;
 
     for (let room in rooms) {
-      const userIndex = rooms[room].users.findIndex(user => user.id === socket.id);
+      const userIndex = rooms[room].users.findIndex((user) => user.id === socket.id);
       if (userIndex !== -1) {
         username = rooms[room].users[userIndex].username;
         roomId = room;
@@ -104,13 +98,9 @@ io.on('connection', (socket) => {
       io.to(roomId).emit('userLeft', { username });
       io.to(roomId).emit('roomUsers', rooms[roomId].users);
 
+      if (rooms[roomId].users.length === 0) delete rooms[roomId];
       console.log(`${username} left room ${roomId}`);
     }
-  });
-
-  socket.on('leaveRoom', ({ roomId }) => {
-    socket.leave(roomId);
-    console.log(`Socket ${socket.id} left room ${roomId}`);
   });
 
   socket.on('error', (err) => {
