@@ -26,21 +26,38 @@ io.on('connection', (socket) => {
   console.log('New client connected:', socket.id);
 
   socket.on('joinRoom', ({ roomId, username }) => {
-    if (!roomId || !username) return;
-
     if (!rooms[roomId]) {
-      rooms[roomId] = { users: [], code: '', language: 'c', input: '', output: '' };
+      rooms[roomId] = {
+        users: [],
+        code: '', 
+        language: 'c', 
+        input: '', 
+        output: '', 
+      };
     }
-
+  
     rooms[roomId].users.push({ id: socket.id, username });
+  
+    // Join the room
     socket.join(roomId);
-
-    socket.emit('roomState', rooms[roomId]);
+  
+    // Send the current state of the room to the new user
+    socket.emit('syncState', {
+      code: rooms[roomId].code,
+      language: rooms[roomId].language,
+      input: rooms[roomId].input,
+      output: rooms[roomId].output,
+    });
+  
+    // Notify other users that a new user has joined
     socket.to(roomId).emit('userJoined', { username });
+  
+    // Emit the updated list of users in the room
     io.to(roomId).emit('roomUsers', rooms[roomId].users);
-
+  
     console.log(`${username} joined room ${roomId}`);
   });
+  
 
   socket.on('codeChange', ({ roomId, code }) => {
     if (!rooms[roomId]) return;
