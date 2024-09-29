@@ -43,6 +43,10 @@ io.on('connection', (socket) => {
   socket.on('codeChange', ({ roomId, code }) => {
     socket.to(roomId).emit('codeUpdate', code);
   });
+  
+  socket.on('languageChange', ({ roomId, language }) => {
+    socket.to(roomId).emit('languageUpdate', language);
+  });
 
 socket.on('inputChange', ({ roomId, input }) => {
   socket.to(roomId).emit('inputUpdate', input); 
