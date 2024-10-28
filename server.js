@@ -57,21 +57,59 @@ int main() {
     console.log(`${username} joined room ${roomId}`);
     io.to(roomId).emit('roomUsers', rooms[roomId].users);
   });
+socket.on('getRoomState', ({ roomId }) => {
+  const room = rooms[roomId];  
+  if (room) {
+    socket.emit('roomState', {
+      code: room.code,
+      language: room.language,
+      input: room.input,
+      output: room.output,
+    });
+  }
+});
 
-  socket.on('codeChange', ({ roomId, code }) => {
-    if (rooms[roomId]) {
-      rooms[roomId].code = code;
-      socket.to(roomId).emit('codeUpdate', code);
-    }
-  });
-  
+
   socket.on('languageChange', ({ roomId, language }) => {
     if (rooms[roomId]) {
       rooms[roomId].language = language;
-      socket.to(roomId).emit('languageUpdate', language);
+  
+      let newCode = '';
+      switch (language) {
+        case 'c':
+          newCode = `// Default C code\n#include <stdio.h>\n\nint main() {\n    printf("Hello, World!\\n");\n    return 0;\n}`;
+          break;
+        case 'cpp':
+          newCode = `// Default C++ code\n#include <iostream>\nusing namespace std;\n\nint main() {\n    cout << "Hello, World!" << endl;\n    return 0;\n}`;
+          break;
+        case 'java':
+          newCode = `// Default Java code\npublic class Main {\n    public static void main(String[] args) {\n        System.out.println("Hello, World!");\n    }\n}`;
+          break;
+        case 'python':
+          newCode = `# Default Python code\nprint("Hello, World!")`;
+          break;
+        case 'javascript':
+          newCode = `// Default JavaScript code\nconsole.log("Hello, World!");`;
+          break;
+      }
+  
+      rooms[roomId].code = newCode; 
+  
+      io.to(roomId).emit('languageUpdate', { language, code: newCode });
     }
   });
-
+  
+  socket.on('codeChange', ({ roomId, code }) => {
+    if (rooms[roomId]) {
+      rooms[roomId].code = code;
+      socket.to(roomId).emit('codeUpdate', code); 
+    }
+  });
+  socket.on('roomUsers', (users) => {
+    setConnectedUsers(users.map(user => user.username));
+  });
+  
+  
   socket.on('inputChange', ({ roomId, input }) => {
     if (rooms[roomId]) {
       rooms[roomId].input = input;
